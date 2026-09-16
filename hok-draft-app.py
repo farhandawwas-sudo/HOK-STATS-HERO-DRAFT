@@ -1,430 +1,425 @@
 import streamlit as st
 import pandas as pd
-import json
 
 # ==========================================
 # PAGE CONFIG & STYLING
 # ==========================================
 st.set_page_config(
-    page_title="HOK Pro Draft Engine | By Siropkokop",
+    page_title="HOK Pro Draft & Strategy Engine (116 Heroes) | By Siropkokop",
     page_icon="⚔️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for Esports Dark Theme
+# Custom CSS for Esports Dark Theme & Compact Ergonomic UI
 st.markdown("""
 <style>
     .main-title {
-        font-size: 2.2rem;
+        font-size: 2.0rem;
         font-weight: 800;
         color: #FFD700;
         text-align: center;
         margin-bottom: 0px;
     }
     .sub-title {
-        font-size: 1.0rem;
+        font-size: 0.95rem;
         color: #AAAAAA;
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
     }
     .stCard {
         background-color: #1E1E2E;
-        padding: 15px;
-        border-radius: 10px;
+        padding: 12px;
+        border-radius: 8px;
         border: 1px solid #313244;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
     .metric-box {
         background-color: #11111B;
-        border-left: 5px solid #FFD700;
-        padding: 12px;
-        border-radius: 5px;
-        margin-bottom: 10px;
-    }
-    .alert-danger {
-        background-color: #3d0c11;
-        border-left: 5px solid #e74c3c;
-        color: #ff9999;
-        padding: 10px 15px;
-        border-radius: 5px;
+        border-left: 4px solid #FFD700;
+        padding: 10px;
+        border-radius: 6px;
         margin-bottom: 8px;
-        font-weight: bold;
     }
-    .alert-success {
-        background-color: #0d381e;
-        border-left: 5px solid #2ecc71;
-        color: #88ffb8;
-        padding: 10px 15px;
-        border-radius: 5px;
-        margin-bottom: 8px;
-        font-weight: bold;
-    }
-    .badge-s { background-color: #E74C3C; color: white; padding: 3px 8px; border-radius: 5px; font-weight: bold; font-size: 12px; }
-    .badge-a { background-color: #F39C12; color: white; padding: 3px 8px; border-radius: 5px; font-weight: bold; font-size: 12px; }
-    .badge-role { background-color: #3498DB; color: white; padding: 3px 8px; border-radius: 5px; font-weight: bold; font-size: 12px; }
+    .badge-s { background-color: #E74C3C; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    .badge-a { background-color: #F39C12; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    .badge-b { background-color: #3498DB; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    .alert-danger { background-color: #421212; border: 1px solid #E74C3C; color: #FF9999; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
+    .alert-success { background-color: #123318; border: 1px solid #2ECC71; color: #99FFBB; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize Session State
-if 'used_heroes' not in st.session_state:
-    st.session_state['used_heroes'] = []
-if 'game_number' not in st.session_state:
-    st.session_state['game_number'] = 1
-if 'match_history' not in st.session_state:
-    st.session_state['match_history'] = []
-
 # ==========================================
-# COMPLETE HERO DATABASE SEASON 16 (BY ROLE)
+# COMPLETE 116 HEROES DATABASE (SEASON 16)
 # ==========================================
 HERO_DB = {
     "Clash": [
-        {"name": "Biron", "tier": "S", "wr": 54.2, "pr": "28.5%", "br": "15.2%", "counters": ["Physical Fighters", "Melee Assassins"], "synergies": ["Zhang Fei", "Dun", "Angela"], "desc": "Frontline badak dengan shield tebal dan regen stamina gila."},
-        {"name": "Florentino", "tier": "S", "wr": 53.8, "pr": "18.2%", "br": "42.1%", "counters": ["Tank Heavy", "Sustained Duelists"], "synergies": ["Yaria", "Dolia"], "desc": "God-tier duelis 1v1 dengan mekanik gocekan bunga frame-perfect."},
-        {"name": "Dharma", "tier": "S", "wr": 53.5, "pr": "22.1%", "br": "25.0%", "counters": ["Immobile Squishies", "Wall Huggers"], "synergies": ["Lady Sun", "Yao", "Yixing"], "desc": "Inisiator wall-slam mematikan pembuka war di area sempit."},
-        {"name": "Charlotte", "tier": "S", "wr": 53.1, "pr": "17.5%", "br": "18.4%", "counters": ["Attack Speed Carries", "Basic Attackers"], "synergies": ["Zhang Fei", "Wang Zhaojun"], "desc": "Counter alami hero fisik dengan debuff attack speed & damage reduction."},
-        {"name": "Allain", "tier": "A", "wr": 51.8, "pr": "19.4%", "br": "10.5%", "counters": ["Squishy Carries", "Shield Tanks"], "synergies": ["Wang Zhaojun", "Dolia"], "desc": "Duelist hybrid physical/magic damage dengan untargetable ulti."},
-        {"name": "Sun Ce", "tier": "A", "wr": 51.2, "pr": "15.0%", "br": "8.2%", "counters": ["Split Pushers", "Immobile Carries"], "synergies": ["Da Qiao", "Nuwa", "Arli"], "desc": "Penguasa kapal rotasi global untuk gank cepat antar lane."},
-        {"name": "Fatih", "tier": "A", "wr": 50.8, "pr": "12.3%", "br": "5.1%", "counters": ["Melee Fighters"], "synergies": ["Devara", "Kui"], "desc": "Fighter crowd control perusak formasi musuh."},
-        {"name": "Li Xin", "tier": "A", "wr": 50.5, "pr": "16.8%", "br": "6.0%", "counters": ["Immobile Mages"], "synergies": ["Dolia", "Zhang Fei"], "desc": "Fighter dua wujud: Light (Aoe Burst) & Dark (Fast Split Push)."},
-        {"name": "Dun", "tier": "A", "wr": 52.0, "pr": "21.0%", "br": "4.5%", "counters": ["Dive Assassins"], "synergies": ["Xiao Qiao", "Arli", "Xuance"], "desc": "Tank pasak bumi dengan true damage & shield regenerasi."},
-        {"name": "Nezha", "tier": "A", "wr": 51.4, "pr": "10.1%", "br": "7.8%", "counters": ["Healers", "Backline Carries"], "synergies": ["Pei", "Nuwa"], "desc": "Lock-on global target dengan debuff anti-heal bawaan."}
+        {"name": "Biron", "tier": "S", "wr": "54.2%", "pr": "28.5%", "br": "15.2%", "counters": ["Physical Fighters"], "synergies": ["Zhang Fei", "Dun", "Angela"], "desc": "Frontline shield & sustain badak."},
+        {"name": "Florentino", "tier": "S", "wr": "53.8%", "pr": "18.2%", "br": "42.1%", "counters": ["Tank Heavy"], "synergies": ["Yaria", "Dolia"], "desc": "Duelis 1v1 gocekan bunga frame-perfect."},
+        {"name": "Dharma", "tier": "S", "wr": "53.5%", "pr": "22.1%", "br": "25.0%", "counters": ["Immobile Squishies"], "synergies": ["Lady Sun", "Yao", "Yixing"], "desc": "Inisiator wall-slam pembuka war sempit."},
+        {"name": "Charlotte", "tier": "S", "wr": "53.1%", "pr": "17.5%", "br": "18.4%", "counters": ["Attack Speed Carries"], "synergies": ["Zhang Fei", "Wang Zhaojun"], "desc": "Counter alami hero fisik & attack speed."},
+        {"name": "Allain", "tier": "A", "wr": "51.8%", "pr": "19.4%", "br": "10.5%", "counters": ["Squishy Carries"], "synergies": ["Wang Zhaojun", "Dolia"], "desc": "Duelist hybrid damage untargetable ulti."},
+        {"name": "Sun Ce", "tier": "A", "wr": "51.2%", "pr": "15.0%", "br": "8.2%", "counters": ["Split Pushers"], "synergies": ["Da Qiao", "Nuwa"], "desc": "Penguasa kapal rotasi global gank kilat."},
+        {"name": "Fatih", "tier": "A", "wr": "50.8%", "pr": "12.3%", "br": "5.1%", "counters": ["Melee Fighters"], "synergies": ["Devara", "Kui"], "desc": "Fighter crowd control perusak formasi."},
+        {"name": "Li Xin", "tier": "A", "wr": "50.5%", "pr": "16.8%", "br": "6.0%", "counters": ["Immobile Mages"], "synergies": ["Dolia", "Zhang Fei"], "desc": "Dual form: Light AoE & Dark Split Push."},
+        {"name": "Guan Yu", "tier": "A", "wr": "51.0%", "pr": "11.2%", "br": "14.1%", "counters": ["No-CC Comps"], "synergies": ["Da Qiao", "Yixing"], "desc": "Inisiator kuda pendorong formasi musuh."},
+        {"name": "Mulan", "tier": "A", "wr": "50.9%", "pr": "13.4%", "br": "9.2%", "counters": ["Squishy Mages"], "synergies": ["Lam", "Lorion"], "desc": "Assassin dual blade & heavy sword combo."},
+        {"name": "Mayene", "tier": "A", "wr": "51.5%", "pr": "14.2%", "br": "12.0%", "counters": ["Solo Laners"], "synergies": ["Augran", "Dolia"], "desc": "Fighter silat mobilitas tinggi."},
+        {"name": "Dun", "tier": "A", "wr": "52.0%", "pr": "21.0%", "br": "4.5%", "counters": ["Dive Assassins"], "synergies": ["Xiao Qiao", "Arli", "Xuance"], "desc": "Tank pasak bumi true damage & regen."},
+        {"name": "Nezha", "tier": "A", "wr": "51.4%", "pr": "10.1%", "br": "7.8%", "counters": ["Healers", "Backlines"], "synergies": ["Pei", "Nuwa"], "desc": "Global lock-on target & anti-heal."},
+        {"name": "Ata", "tier": "B", "wr": "49.5%", "pr": "8.0%", "br": "2.1%", "counters": ["Non-dash Heroes"], "synergies": ["Lady Sun", "Angela"], "desc": "Tank pembangun tembok penghalang."},
+        {"name": "Arthur", "tier": "B", "wr": "49.8%", "pr": "18.0%", "br": "1.0%", "counters": ["High Mobility"], "synergies": ["Cai Yan"], "desc": "Fighter simpel penekan silence."},
+        {"name": "Wuyan", "tier": "B", "wr": "50.1%", "pr": "9.5%", "br": "2.0%", "counters": ["Melee Clustered"], "synergies": ["Zhang Fei"], "desc": "Fighter palu efek petrik pasif."},
+        {"name": "Kaizer (Clash)", "tier": "A", "wr": "51.5%", "pr": "12.0%", "br": "3.5%", "counters": ["Burst Damage"], "synergies": ["Lady Sun"], "desc": "Fighter wujud iblis penahan gempuran."},
+        {"name": "Sun Wukong (Clash)", "tier": "B", "wr": "49.2%", "pr": "5.0%", "br": "2.0%", "counters": ["Squishies"], "synergies": ["Yaria"], "desc": "Crit burst melee fighter."},
+        {"name": "Lian Po", "tier": "A", "wr": "51.3%", "pr": "10.5%", "br": "3.0%", "counters": ["CC Comps"], "synergies": ["Xiao Qiao"], "desc": "Tank super immune CC inisiator 3-step knockup."},
+        {"name": "Meng Ya (Clash)", "tier": "B", "wr": "48.9%", "pr": "3.0%", "br": "1.0%", "counters": ["Melee Tanks"], "synergies": ["Dolia"], "desc": "Off-meta clash lane heavy sustain."},
+        {"name": "Yang Jian", "tier": "B", "wr": "49.6%", "pr": "6.2%", "br": "1.5%", "counters": ["Low HP Targets"], "synergies": ["Kui"], "desc": "Fighter anjing pelacak true damage laser."},
+        {"name": "Sima Yi (Clash)", "tier": "B", "wr": "49.0%", "pr": "4.1%", "br": "3.0%", "counters": ["Magic Damage"], "synergies": ["Feyd"], "desc": "Anti-mage silence diver."},
+        {"name": "Cheng Yaojin", "tier": "B", "wr": "50.0%", "pr": "11.0%", "br": "2.5%", "counters": ["Low Anti-heal"], "synergies": ["Dolia"], "desc": "Tank regen HP gila splitter lane."}
     ],
     "Jungle": [
-        {"name": "Augran", "tier": "S", "wr": 55.8, "pr": "32.1%", "br": "58.4%", "counters": ["Wall Huggers", "Tank Comps"], "synergies": ["Biron", "Zhang Fei", "Angela"], "desc": "Jungler T0 paling dominan Season 16 dengan wujud jiwa penyerap HP."},
-        {"name": "Lam", "tier": "S", "wr": 54.9, "pr": "29.8%", "br": "62.0%", "counters": ["Low HP Squishies", "Immobile Carries"], "synergies": ["Yaria", "Angela", "Wang Zhaojun"], "desc": "Assassin hiu dengan pasif true damage target HP <30%."},
-        {"name": "Jing", "tier": "S", "wr": 54.1, "pr": "15.2%", "br": "48.0%", "counters": ["Clustered Comps"], "synergies": ["Yixing", "Dolia"], "desc": "Assassin cermin mekanik tinggi dengan infinite swap dash."},
-        {"name": "Luna", "tier": "S", "wr": 53.9, "pr": "11.8%", "br": "52.1%", "counters": ["No-Hard-CC Comps"], "synergies": ["Da Qiao", "Zhang Fei"], "desc": "Mage-Assassin dengan mark reset ulti tanpa batas."},
-        {"name": "Feyd", "tier": "S", "wr": 53.9, "pr": "21.4%", "br": "35.2%", "counters": ["Backline MM", "Vision-less Comps"], "synergies": ["Kui", "Devara", "Haya"], "desc": "Assassin bayangan penyergap lini belakang dari fog of war."},
-        {"name": "Li Bai", "tier": "A", "wr": 52.1, "pr": "18.5%", "br": "11.2%", "counters": ["Skillshot Mages", "Immobile Carries"], "synergies": ["Kui", "Nuwa", "Devara"], "desc": "Assassin lincah dengan 2 wujud untargetable & dash balik bayangan."},
-        {"name": "Pei", "tier": "A", "wr": 51.8, "pr": "14.2%", "br": "19.0%", "counters": ["Slow Early Junglers"], "synergies": ["Biron", "Devara", "Nezha"], "desc": "Jungler wujud harimau dengan power spike invasif sejak menit 0:30."},
-        {"name": "Musashi", "tier": "A", "wr": 51.5, "pr": "16.1%", "br": "8.4%", "counters": ["Healers", "Shield Comps"], "synergies": ["Dolia", "Xiao Qiao"], "desc": "Pendekar pemotong shield & pengunci target tunggal."},
-        {"name": "Kaizer", "tier": "A", "wr": 52.2, "pr": "24.0%", "br": "5.1%", "counters": ["Burst Assassins"], "synergies": ["Zhang Fei", "Lady Sun"], "desc": "Jungler Tank/Fighter wujud iblis penahan gempuran fisik."},
-        {"name": "Ukyo", "tier": "A", "wr": 51.1, "pr": "12.0%", "br": "3.2%", "counters": ["Early Squishies"], "synergies": ["Mozi", "Xiao Qiao"], "desc": "Samurai burst damage jarak menengah dengan lifesteal cepat."},
-        {"name": "Xuance", "tier": "A", "wr": 52.0, "pr": "13.5%", "br": "15.1%", "counters": ["No-escape Carries"], "synergies": ["Mozi", "Dun", "Xiao Qiao"], "desc": "Assassin pancing kait pembalik posisi musuh ke belakang."}
+        {"name": "Augran", "tier": "S", "wr": "55.8%", "pr": "32.1%", "br": "58.4%", "counters": ["Wall Huggers", "Tanks"], "synergies": ["Biron", "Zhang Fei", "Angela"], "desc": "Jungler T0 soul absorber HP drain."},
+        {"name": "Lam", "tier": "S", "wr": "54.9%", "pr": "29.8%", "br": "62.0%", "counters": ["Low HP Squishies"], "synergies": ["Yaria", "Angela", "Wang Zhaojun"], "desc": "Assassin hiu pasif true damage <30% HP."},
+        {"name": "Feyd", "tier": "S", "wr": "53.9%", "pr": "21.4%", "br": "35.2%", "counters": ["Backline MM"], "synergies": ["Kui", "Devara", "Haya"], "desc": "Assassin bayangan penyergap fog of war."},
+        {"name": "Jing", "tier": "S", "wr": "54.1%", "pr": "15.2%", "br": "48.0%", "counters": ["Clustered Comps"], "synergies": ["Yixing", "Dolia"], "desc": "Assassin cermin infinite swap dash."},
+        {"name": "Luna", "tier": "S", "wr": "53.9%", "pr": "11.8%", "br": "52.1%", "counters": ["No-Hard-CC"], "synergies": ["Da Qiao", "Zhang Fei"], "desc": "Mage-Assassin mark reset ulti tanpa batas."},
+        {"name": "Li Bai", "tier": "A", "wr": "52.1%", "pr": "18.5%", "br": "11.2%", "counters": ["Skillshot Mages"], "synergies": ["Kui", "Nuwa", "Devara"], "desc": "Assassin 2 untargetable & dash shadow return."},
+        {"name": "Pei", "tier": "A", "wr": "51.8%", "pr": "14.2%", "br": "19.0%", "counters": ["Slow Early Junglers"], "synergies": ["Biron", "Devara", "Nezha"], "desc": "Jungler harimau invade menit 0:30."},
+        {"name": "Musashi", "tier": "A", "wr": "51.5%", "pr": "16.1%", "br": "8.4%", "counters": ["Healers", "Shields"], "synergies": ["Dolia", "Xiao Qiao"], "desc": "Pendekar pemotong shield single target lock."},
+        {"name": "Kaizer", "tier": "A", "wr": "52.2%", "pr": "24.0%", "br": "5.1%", "counters": ["Burst Assassins"], "synergies": ["Zhang Fei", "Lady Sun"], "desc": "Jungler Tank/Fighter wujud iblis."},
+        {"name": "Ukyo", "tier": "A", "wr": "51.1%", "pr": "12.0%", "br": "3.2%", "counters": ["Early Squishies"], "synergies": ["Mozi", "Xiao Qiao"], "desc": "Samurai burst damage lifesteal cepat."},
+        {"name": "Xuance", "tier": "A", "wr": "52.0%", "pr": "13.5%", "br": "15.1%", "counters": ["No-escape Carries"], "synergies": ["Mozi", "Dun", "Xiao Qiao"], "desc": "Assassin hook pancing pembalik posisi."},
+        {"name": "Wukong", "tier": "A", "wr": "51.2%", "pr": "22.5%", "br": "12.3%", "counters": ["Squishy Backlines"], "synergies": ["Yaria", "Diao Chan"], "desc": "Raja kera critical burst instan."},
+        {"name": "Dian Wei", "tier": "B", "wr": "49.8%", "pr": "14.1%", "br": "2.0%", "counters": ["CC Heavy Comps"], "synergies": ["Cai Yan"], "desc": "Berserker pembersih CC stack true damage."},
+        {"name": "Liu Bei", "tier": "B", "wr": "50.1%", "pr": "9.2%", "br": "1.5%", "counters": ["Melee Tanks"], "synergies": ["Yaria"], "desc": "Marksman-Jungle pembantai naga."},
+        {"name": "Nakoruru", "tier": "A", "wr": "51.6%", "pr": "13.1%", "br": "6.2%", "counters": ["High HP Tanks"], "synergies": ["Yaria"], "desc": "Assassin burung burst max HP % damage."},
+        {"name": "Mai Shiranui (Jungle)", "tier": "B", "wr": "49.5%", "pr": "3.2%", "br": "12.0%", "counters": ["Squishies"], "synergies": ["Dolia"], "desc": "Off-meta mage assassin jungle."},
+        {"name": "Prince of Lanling", "tier": "A", "wr": "51.0%", "pr": "16.0%", "br": "22.1%", "counters": ["Immobile Carries"], "synergies": ["Biron"], "desc": "Assassin stealth permanen penculik awal game."},
+        {"name": "Han Xin", "tier": "A", "wr": "51.3%", "pr": "17.4%", "br": "11.0%", "counters": ["Slow Rotations"], "synergies": ["Da Qiao"], "desc": "Assassin multi-dash penguasa split push."},
+        {"name": "Zilong", "tier": "B", "wr": "50.0%", "pr": "15.2%", "br": "2.0%", "counters": ["Squishy Mages"], "synergies": ["Zhang Fei"], "desc": "Fighter-Assassin spear dive knockup."},
+        {"name": "Fang (Jungle)", "tier": "B", "wr": "50.2%", "pr": "8.1%", "br": "1.2%", "counters": ["Early Dragons"], "synergies": ["Dun"], "desc": "MM jungle pengaman objektif cepat."},
+        {"name": "Chicha", "tier": "A", "wr": "51.7%", "pr": "11.0%", "br": "5.4%", "counters": ["Melee Junglers"], "synergies": ["Wang Zhaojun"], "desc": "Jungler fleksibel penekan gank."},
+        {"name": "Umbrosa", "tier": "A", "wr": "52.3%", "pr": "14.0%", "br": "18.0%", "counters": ["Immobile Backlines"], "synergies": ["Devara"], "desc": "Jungler 6-mark execution rework S16."},
+        {"name": "Cirrus", "tier": "B", "wr": "49.1%", "pr": "6.0%", "br": "1.0%", "counters": ["Low CC"], "synergies": ["Yaria"], "desc": "Jungler terbang penembus tembok."},
+        {"name": "Ake", "tier": "A", "wr": "51.4%", "pr": "12.5%", "br": "14.2%", "counters": ["Low HP Comps"], "synergies": ["Zhang Fei"], "desc": "Assassin backstab stealth reset cooldown kill."},
+        {"name": "Bao Si", "tier": "B", "wr": "48.8%", "pr": "4.0%", "br": "1.0%", "counters": ["Frontlines"], "synergies": ["Dolia"], "desc": "Jungler mage burst bintik energi."}
     ],
     "Mid": [
-        {"name": "Haya", "tier": "S", "wr": 56.2, "pr": "28.0%", "br": "45.1%", "counters": ["Cluster Formations"], "synergies": ["Feyd", "Li Bai", "Augran"], "desc": "Mage S-Tier Red Side Win Rate 80% pemanggil badai bulan."},
-        {"name": "Mai Shiranui", "tier": "S", "wr": 54.5, "pr": "18.0%", "br": "55.0%", "counters": ["Squishy Backlines"], "synergies": ["Feyd", "Augran"], "desc": "Mage-Assassin lincah pembebas energi combo sekali putar."},
-        {"name": "Wang Zhaojun", "tier": "S", "wr": 54.1, "pr": "31.2%", "br": "22.0%", "counters": ["Dive Comps", "Melee Assassins"], "synergies": ["Biron", "Lady Sun", "Zhang Fei"], "desc": "Mage kontroller es pembeku area dengan shield pembawa pasif slow."},
-        {"name": "Yixing", "tier": "S", "wr": 54.0, "pr": "17.8%", "br": "24.5%", "counters": ["No-escape Comps"], "synergies": ["Dharma", "Lady Sun", "Dolia"], "desc": "Mage papan catur pengurung musuh dalam area raksasa."},
-        {"name": "Xiao Qiao", "tier": "S", "wr": 53.8, "pr": "35.1%", "br": "18.2%", "counters": ["Chokepoint War"], "synergies": ["Mozi", "Dun", "Arli"], "desc": "Mage poke & knock-up instan dengan burst kipas raksasa."},
-        {"name": "Heino", "tier": "S", "wr": 53.7, "pr": "22.1%", "br": "31.0%", "counters": ["Attrition Comps"], "synergies": ["Dolia", "Flowborn (MM)"], "desc": "Mage pemutar waktu reset HP & tower dengan combo Dolia."},
-        {"name": "Lorion", "tier": "S", "wr": 53.5, "pr": "19.2%", "br": "28.0%", "counters": ["Tight Formations"], "synergies": ["Pei", "Devara", "Lam"], "desc": "Mage bola elektrik perusak formasi musuh di udara."},
-        {"name": "Shangguan", "tier": "A", "wr": 52.8, "pr": "14.2%", "br": "38.2%", "counters": ["Immobile Mages"], "synergies": ["Lam", "Yaria"], "desc": "Mage kuas terbang untargetable pembantai lini belakang."},
-        {"name": "Nuwa", "tier": "A", "wr": 52.4, "pr": "11.5%", "br": "9.1%", "counters": ["Long-range Siege"], "synergies": ["Sun Ce", "Nezha", "Li Bai"], "desc": "Mage pencipta matriks tembok & teleportasi matriks peta global."},
-        {"name": "Angela", "tier": "A", "wr": 51.9, "pr": "38.0%", "br": "8.5%", "counters": ["Frontline Tanks"], "synergies": ["Lam", "Zhang Fei", "Biron"], "desc": "Mage pembalas burst laser dengan shield CC-immunity."},
-        {"name": "Kui", "tier": "A", "wr": 51.1, "pr": "16.4%", "br": "15.0%", "counters": ["Immobile Carries"], "synergies": ["Li Bai", "Feyd", "Nuwa"], "desc": "Mage kait pengisolasi 1 target dari jarak sangat jauh."}
+        {"name": "Haya", "tier": "S", "wr": "56.2%", "pr": "28.0%", "br": "45.1%", "counters": ["Cluster Formations"], "synergies": ["Feyd", "Li Bai", "Augran"], "desc": "Mage S-Tier Red Side Win Rate 80% badai bulan."},
+        {"name": "Wang Zhaojun", "tier": "S", "wr": "54.1%", "pr": "31.2%", "br": "22.0%", "counters": ["Dive Comps"], "synergies": ["Biron", "Lady Sun", "Zhang Fei"], "desc": "Mage es pembeku area & shield pasif slow."},
+        {"name": "Xiao Qiao", "tier": "S", "wr": "53.8%", "pr": "35.1%", "br": "18.2%", "counters": ["Chokepoints"], "synergies": ["Mozi", "Dun", "Arli"], "desc": "Mage poke & knock-up instan kipas raksasa."},
+        {"name": "Lorion", "tier": "S", "wr": "53.5%", "pr": "19.2%", "br": "28.0%", "counters": ["Tight Formations"], "synergies": ["Pei", "Devara", "Lam"], "desc": "Mage bola elektrik perusak formasi udara."},
+        {"name": "Heino", "tier": "S", "wr": "53.7%", "pr": "22.1%", "br": "31.0%", "counters": ["Attrition Comps"], "synergies": ["Dolia", "Flowborn (MM)"], "desc": "Mage pemutar waktu reset HP & tower combo Dolia."},
+        {"name": "Mai Shiranui", "tier": "S", "wr": "54.5%", "pr": "18.0%", "br": "55.0%", "counters": ["Squishy Backlines"], "synergies": ["Feyd", "Augran"], "desc": "Mage-Assassin energi combo sekali putar."},
+        {"name": "Yixing", "tier": "S", "wr": "54.0%", "pr": "17.8%", "br": "24.5%", "counters": ["No-escape Comps"], "synergies": ["Dharma", "Lady Sun", "Dolia"], "desc": "Mage papan catur pengurung area raksasa."},
+        {"name": "Nuwa", "tier": "A", "wr": "52.4%", "pr": "11.5%", "br": "9.1%", "counters": ["Long-range Siege"], "synergies": ["Sun Ce", "Nezha", "Li Bai"], "desc": "Mage tembok matriks & teleportasi peta."},
+        {"name": "Angela", "tier": "A", "wr": "51.9%", "pr": "38.0%", "br": "8.5%", "counters": ["Frontline Tanks"], "synergies": ["Lam", "Zhang Fei", "Biron"], "desc": "Mage laser burst shield CC-immunity."},
+        {"name": "Kui", "tier": "A", "wr": "51.1%", "pr": "16.4%", "br": "15.0%", "counters": ["Immobile Carries"], "synergies": ["Li Bai", "Feyd", "Nuwa"], "desc": "Mage kait pengisolasi 1 target jarak jauh."},
+        {"name": "Diao Chan", "tier": "A", "wr": "52.0%", "pr": "21.5%", "br": "29.1%", "counters": ["Skillshot Comps"], "synergies": ["Zhang Fei", "Wukong"], "desc": "Mage penari cooldown reset & true damage."},
+        {"name": "Shangguan", "tier": "A", "wr": "52.8%", "pr": "14.2%", "br": "38.2%", "counters": ["Immobile Mages"], "synergies": ["Lam", "Yaria"], "desc": "Mage kuas terbang untargetable backline."},
+        {"name": "Wang Wei", "tier": "S", "wr": "54.0%", "pr": "16.0%", "br": "20.1%", "counters": ["Vision Dependent"], "synergies": ["Biron", "Devara"], "desc": "Mage baru kabut kegelapan penutup visi S16."},
+        {"name": "Milady", "tier": "A", "wr": "51.8%", "pr": "24.0%", "br": "12.0%", "counters": ["Slow Clear Mages"], "synergies": ["Liu Bei"], "desc": "Mage mekanik robot penghancur turret kilat."},
+        {"name": "Zhou Yu", "tier": "A", "wr": "51.5%", "pr": "15.0%", "br": "6.0%", "counters": ["Immobile Formations"], "synergies": ["Dun"], "desc": "Mage api penyebar area & push turret."},
+        {"name": "Gan & Mo", "tier": "A", "wr": "52.1%", "pr": "13.0%", "br": "18.0%", "counters": ["Squishy Carries"], "synergies": ["Mozi"], "desc": "Mage pedang kembar sniper 1-hit KO."},
+        {"name": "Mozi (Mid)", "tier": "A", "wr": "51.9%", "pr": "12.0%", "br": "5.0%", "counters": ["Long-range Poke"], "synergies": ["Xiao Qiao"], "desc": "Mage meriam stun jarak jauh."},
+        {"name": "Princess Frost", "tier": "A", "wr": "51.2%", "pr": "10.0%", "br": "4.0%", "counters": ["Melee Diver"], "synergies": ["Lady Sun"], "desc": "Mage pemicu es kontrol area."},
+        {"name": "Zhong Kui", "tier": "B", "wr": "49.8%", "pr": "11.2%", "br": "8.0%", "counters": ["Buff Dependent"], "synergies": ["Li Bai"], "desc": "Mage tarik penarik buff/hero."},
+        {"name": "Dr Bian", "tier": "A", "wr": "52.3%", "pr": "14.1%", "br": "7.2%", "counters": ["Attrition Tank Comps"], "synergies": ["Biron", "Cai Yan"], "desc": "Mage racun & heal stack berkelanjutan."},
+        {"name": "Gao Chong", "tier": "B", "wr": "49.2%", "pr": "5.1%", "br": "1.0%", "counters": ["Melee Comps"], "synergies": ["Zhang Fei"], "desc": "Mage gitaris AoE burst panggung."},
+        {"name": "Sima Yi (Mid)", "tier": "A", "wr": "51.4%", "pr": "9.0%", "br": "11.0%", "counters": ["Squishy Mages"], "synergies": ["Lam"], "desc": "Mage bayangan silence pembantai mid."},
+        {"name": "Zhen Ji", "tier": "A", "wr": "51.7%", "pr": "26.0%", "br": "8.0%", "counters": ["Clustered Enemies"], "synergies": ["Zhang Fei"], "desc": "Mage pantulan air es pemicu freeze."},
+        {"name": "Yang Yuhuan", "tier": "A", "wr": "52.0%", "pr": "10.2%", "br": "5.0%", "counters": ["Poke Comps"], "synergies": ["Pei"], "desc": "Mage kecapi switcher heal & damage."},
+        {"name": "Lady Zhen", "tier": "B", "wr": "49.9%", "pr": "12.0%", "br": "2.0%", "counters": ["Non-dash Enemies"], "synergies": ["Dun"], "desc": "Mage air ombak cc melimpah."}
     ],
     "Farm": [
-        {"name": "Ao'yin (Loong)", "tier": "S", "wr": 55.2, "pr": "31.0%", "br": "58.0%", "counters": ["Dive Assassins"], "synergies": ["Yaria", "Dolia", "Zhang Fei"], "desc": "MM naga elemen dengan ulti wujud terbang untargetable."},
-        {"name": "Lady Sun", "tier": "S", "wr": 54.8, "pr": "38.5%", "br": "25.0%", "counters": ["Low Mobility Tanks", "Short Range MM"], "synergies": ["Yaria", "Dharma", "Yao"], "desc": "MM S-Tier burst rolled-attack penghancur armor musuh."},
-        {"name": "Arli", "tier": "S", "wr": 54.2, "pr": "24.1%", "br": "41.0%", "counters": ["Skillshot Mages", "Melee Inisiators"], "synergies": ["Mozi", "Xiao Qiao", "Da Qiao"], "desc": "MM 3-dash parasut paling lincah dengan penepis proyektil."},
-        {"name": "Flowborn (MM)", "tier": "S", "wr": 53.9, "pr": "20.5%", "br": "22.1%", "counters": ["Frontline Tanks"], "synergies": ["Dolia", "Sun Ce", "Heino"], "desc": "MM fleksibel dengan sistem 5-stack double cast skill barrage."},
-        {"name": "Luara", "tier": "A", "wr": 52.1, "pr": "18.2%", "br": "11.0%", "counters": ["Terrain Chokepoints"], "synergies": ["Biron", "Dun", "Mozi"], "desc": "MM baru pemanjat dinding dengan pantulan panah bertubi-tubi."},
-        {"name": "Marco Polo", "tier": "A", "wr": 51.5, "pr": "29.0%", "br": "14.2%", "counters": ["Heavy Armor Tanks"], "synergies": ["Dolia", "Zhang Fei", "Yaria"], "desc": "MM pistol ganda penembak true damage & ultimate mutar."},
-        {"name": "Consort Yu", "tier": "A", "wr": 51.0, "pr": "19.5%", "br": "8.0%", "counters": ["Physical Assassins"], "synergies": ["Zhang Fei", "Biron"], "desc": "MM imun serangan fisik dengan skill panah sniper jarak jauh."},
-        {"name": "Shouyue", "tier": "A", "wr": 51.8, "pr": "21.0%", "br": "18.5%", "counters": ["Vision-dependent Comps"], "synergies": ["Mozi", "Nuwa"], "desc": "MM sniper jarak ekstra jauh & pemasang trap visi semak."}
+        {"name": "Lady Sun", "tier": "S", "wr": "54.8%", "pr": "38.5%", "br": "25.0%", "counters": ["Low Mobility Tanks"], "synergies": ["Yaria", "Dharma", "Yao"], "desc": "MM S-Tier burst rolled-attack penembus armor."},
+        {"name": "Ao'yin (Loong)", "tier": "S", "wr": "55.2%", "pr": "31.0%", "br": "58.0%", "counters": ["Dive Assassins"], "synergies": ["Yaria", "Dolia", "Zhang Fei"], "desc": "MM naga elemen ulti wujud terbang untargetable."},
+        {"name": "Arli", "tier": "S", "wr": "54.2%", "pr": "24.1%", "br": "41.0%", "counters": ["Skillshot Mages"], "synergies": ["Mozi", "Xiao Qiao", "Da Qiao"], "desc": "MM 3-dash parasut penepis proyektil."},
+        {"name": "Flowborn (MM)", "tier": "S", "wr": "53.9%", "pr": "20.5%", "br": "22.1%", "counters": ["Frontline Tanks"], "synergies": ["Dolia", "Sun Ce", "Heino"], "desc": "MM 5-stack double cast skill barrage."},
+        {"name": "Luara", "tier": "A", "wr": "52.1%", "pr": "18.2%", "br": "11.0%", "counters": ["Terrain Chokepoints"], "synergies": ["Biron", "Dun", "Mozi"], "desc": "MM pemanjat dinding pantulan panah S16."},
+        {"name": "Marco Polo", "tier": "A", "wr": "51.5%", "pr": "29.0%", "br": "14.2%", "counters": ["Heavy Armor Tanks"], "synergies": ["Dolia", "Zhang Fei", "Yaria"], "desc": "MM pistol ganda true damage & ulti mutar."},
+        {"name": "Consort Yu", "tier": "A", "wr": "51.0%", "pr": "19.5%", "br": "8.0%", "counters": ["Physical Assassins"], "synergies": ["Zhang Fei", "Biron"], "desc": "MM imun fisik & sniper jarak jauh."},
+        {"name": "Shouyue", "tier": "A", "wr": "51.8%", "pr": "21.0%", "br": "18.5%", "counters": ["Vision Dependent"], "synergies": ["Mozi", "Nuwa"], "desc": "MM sniper ekstra jauh & trap visi semak."},
+        {"name": "Luban No.7", "tier": "B", "wr": "50.2%", "pr": "32.0%", "br": "5.1%", "counters": ["High HP Tanks"], "synergies": ["Zhang Fei", "Cai Yan"], "desc": "MM roket max HP % damage tanpa ampuni."},
+        {"name": "Alessio", "tier": "A", "wr": "51.2%", "pr": "15.0%", "br": "6.2%", "counters": ["Clustered Tanks"], "synergies": ["Yaria", "Dolia"], "desc": "MM meriam terbang & stealth asap."},
+        {"name": "Meng Ya", "tier": "A", "wr": "51.6%", "pr": "17.0%", "br": "4.0%", "counters": ["Low Mobility Comps"], "synergies": ["Zhang Fei"], "desc": "MM peluru terus menerus & bombardir ulti."},
+        {"name": "Fang", "tier": "A", "wr": "51.4%", "pr": "14.2%", "br": "3.1%", "counters": ["Towers & Objectives"], "synergies": ["Dun"], "desc": "MM bom waktu peledak turret & naga."},
+        {"name": "Hou Yi", "tier": "B", "wr": "50.4%", "pr": "28.0%", "br": "4.0%", "counters": ["No-CC Frontlines"], "synergies": ["Zhang Fei", "Ming"], "desc": "MM panah matahari attack speed gila."},
+        {"name": "Huang Zhong", "tier": "A", "wr": "51.9%", "pr": "13.5%", "br": "7.5%", "counters": ["Siege & Defend"], "synergies": ["Zhang Fei", "Wang Zhaojun"], "desc": "MM meriam tancap kincir pertahanan."},
+        {"name": "Gara", "tier": "B", "wr": "49.5%", "pr": "11.0%", "br": "2.0%", "counters": ["Melee Fighters"], "synergies": ["Cai Yan"], "desc": "MM jebakan pasir penahan gerakan."},
+        {"name": "Kahn", "tier": "B", "wr": "49.2%", "pr": "8.0%", "br": "1.0%", "counters": ["Short Range MM"], "synergies": ["Yaria"], "desc": "MM kebal serangan kejutan."},
+        {"name": "Eir", "tier": "B", "wr": "49.0%", "pr": "6.0%", "br": "1.0%", "counters": ["Shield Tanks"], "synergies": ["Dolia"], "desc": "MM energi penembus benteng es."},
+        {"name": "Baili Shouyue (Farm)", "tier": "A", "wr": "51.5%", "pr": "18.0%", "br": "15.0%", "counters": ["Long Range Poke"], "synergies": ["Mozi"], "desc": "Sniper vision provider."},
+        {"name": "Di Renjie", "tier": "A", "wr": "52.0%", "pr": "22.0%", "br": "5.0%", "counters": ["CC Heavy Comps"], "synergies": ["Zhang Fei"], "desc": "MM kartu pasif cleanse & yellow card stun."},
+        {"name": "Solaris", "tier": "B", "wr": "49.8%", "pr": "7.2%", "br": "1.1%", "counters": ["Melee Dive"], "synergies": ["Yaria"], "desc": "MM cahaya penembus armor."},
+        {"name": "Erin", "tier": "A", "wr": "51.3%", "pr": "14.0%", "br": "3.5%", "counters": ["Physical Armor Tanks"], "synergies": ["Yaria", "Dun"], "desc": "MM magic damage tarian peri lincah."}
     ],
     "Roam": [
-        {"name": "Zhang Fei", "tier": "S", "wr": 55.1, "pr": "42.0%", "br": "21.0%", "counters": ["Heavy Dive Comps"], "synergies": ["Lady Sun", "Angela", "Augran"], "desc": "Roamer T0 pelindung carry dengan raungan ulti monster & shield tebal."},
-        {"name": "Dolia", "tier": "S", "wr": 54.9, "pr": "31.5%", "br": "52.0%", "counters": ["Short Cooldown Comps"], "synergies": ["Heino", "Marco Polo", "Yixing"], "desc": "Support duyung pemutar waktu reset cooldown ultimate rekan tim."},
-        {"name": "Yaria", "tier": "S", "wr": 54.6, "pr": "36.2%", "br": "45.0%", "counters": ["Single Target Burst"], "synergies": ["Lady Sun", "Lam", "Ao'yin (Loong)"], "desc": "Support penempel carry dengan bonus +15% gold & shield penahan CC."},
-        {"name": "Mozi", "tier": "S", "wr": 53.8, "pr": "28.4%", "br": "22.0%", "counters": ["Immobile Carries"], "synergies": ["Xiao Qiao", "Arli", "Xuance"], "desc": "Support meriam stun jarak jauh perusak konsentrasi musuh."},
-        {"name": "Da Qiao", "tier": "S", "wr": 53.5, "pr": "19.0%", "br": "48.2%", "counters": ["Slow Rotations"], "synergies": ["Sun Ce", "Arli", "Luna"], "desc": "Support portal teleportasi pemutar balik pasukan ke base."},
-        {"name": "Devara", "tier": "A", "wr": 52.3, "pr": "18.0%", "br": "14.1%", "counters": ["Flanking Assassins"], "synergies": ["Fatih", "Dharma", "Feyd"], "desc": "Roamer pilar penjepit lokasi war dengan arena kuncian."},
-        {"name": "Dun", "tier": "A", "wr": 51.9, "pr": "20.1%", "br": "3.5%", "counters": ["Melee Inisiators"], "synergies": ["Biron", "Xiao Qiao", "Xuance"], "desc": "Roamer tank tahan banting pencetus hook & knock-up."}
+        {"name": "Zhang Fei", "tier": "S", "wr": "55.1%", "pr": "42.0%", "br": "21.0%", "counters": ["Heavy Dive Comps"], "synergies": ["Lady Sun", "Angela", "Augran"], "desc": "Roamer T0 raungan ulti monster & shield tebal."},
+        {"name": "Yaria", "tier": "S", "wr": "54.6%", "pr": "36.2%", "br": "45.0%", "counters": ["Single Target Burst"], "synergies": ["Lady Sun", "Lam", "Ao'yin (Loong)"], "desc": "Support penempel carry +15% gold & shield CC."},
+        {"name": "Dolia", "tier": "S", "wr": "54.9%", "pr": "31.5%", "br": "52.0%", "counters": ["Short Cooldowns"], "synergies": ["Heino", "Marco Polo", "Yixing"], "desc": "Support duyung reset cooldown ultimate tim."},
+        {"name": "Devara", "tier": "A", "wr": "52.3%", "pr": "18.0%", "br": "14.1%", "counters": ["Flanking Assassins"], "synergies": ["Fatih", "Dharma", "Feyd"], "desc": "Roamer arena kuncian lokasi war."},
+        {"name": "Mozi", "tier": "S", "wr": "53.8%", "pr": "28.4%", "br": "22.0%", "counters": ["Immobile Carries"], "synergies": ["Xiao Qiao", "Arli", "Xuance"], "desc": "Support meriam stun jarak jauh."},
+        {"name": "Dun", "tier": "A", "wr": "51.9%", "pr": "20.1%", "br": "3.5%", "counters": ["Melee Inisiators"], "synergies": ["Biron", "Xiao Qiao", "Xuance"], "desc": "Roamer tank hook & knock-up."},
+        {"name": "Da Qiao", "tier": "S", "wr": "54.0%", "pr": "21.0%", "br": "48.0%", "counters": ["Slow Rotations"], "synergies": ["Sun Ce", "Arli", "Han Xin"], "desc": "Support portal teleportasi base & panggilan tim."},
+        {"name": "Dunshan", "tier": "S", "wr": "53.7%", "pr": "15.0%", "br": "32.0%", "counters": ["Projectile MM/Mages"], "synergies": ["Lady Sun", "Wang Zhaojun"], "desc": "Roamer perisai pemblokir proyektil & nempel tower S16."},
+        {"name": "Cai Yan", "tier": "A", "wr": "52.1%", "pr": "25.0%", "br": "18.0%", "counters": ["Attrition Damage"], "synergies": ["Luban No.7", "Hou Yi"], "desc": "Support mobil heal melimpah & bounce stun."},
+        {"name": "Ming", "tier": "A", "wr": "51.8%", "pr": "18.0%", "br": "12.0%", "counters": ["Solo Carries"], "synergies": ["Hou Yi", "Arli"], "desc": "Support tali penambah attack/defense carry."},
+        {"name": "Zhuangzi", "tier": "A", "wr": "52.2%", "pr": "22.0%", "br": "10.0%", "counters": ["CC Heavy Comps"], "synergies": ["Marco Polo"], "desc": "Support ikan pembebas efek CC seluruh tim."},
+        {"name": "Yao", "tier": "A", "wr": "51.5%", "pr": "16.0%", "br": "8.0%", "counters": ["Squishy Inisiators"], "synergies": ["Dharma", "Lady Sun"], "desc": "Support penyerap damage & finisher CC."},
+        {"name": "Sun Bin", "tier": "A", "wr": "52.0%", "pr": "19.0%", "br": "6.0%", "counters": ["Burst Damage Comps"], "synergies": ["Biron", "Pei"], "desc": "Support waktu pembalik HP & speed boost tim."},
+        {"name": "Kui (Roam)", "tier": "A", "wr": "51.2%", "pr": "14.0%", "br": "12.0%", "counters": ["No-dash Carries"], "synergies": ["Li Bai"], "desc": "Roamer hook penculik."},
+        {"name": "Guan Yu (Roam)", "tier": "B", "wr": "49.8%", "pr": "5.0%", "br": "8.0%", "counters": ["No CC"], "synergies": ["Da Qiao"], "desc": "Roamer kuda inisiator pendorong."},
+        {"name": "Liu Bang", "tier": "A", "wr": "51.6%", "pr": "11.0%", "br": "4.0%", "counters": ["Single Target Focus"], "synergies": ["Lam", "Jing"], "desc": "Tank teleportasi shield langsung ke rekan tim."},
+        {"name": "Nezha (Roam)", "tier": "B", "wr": "49.1%", "pr": "3.0%", "br": "2.0%", "counters": ["Healers"], "synergies": ["Pei"], "desc": "Roamer disrupsi anti-heal global."},
+        {"name": "Agudo", "tier": "A", "wr": "51.4%", "pr": "8.0%", "br": "3.0%", "counters": ["Slow Clear Tanks"], "synergies": ["Meng Ya"], "desc": "Support panda pemanggil monster hutan."},
+        {"name": "Donghuang", "tier": "S", "wr": "53.5%", "pr": "20.0%", "br": "55.0%", "counters": ["High Mobility Assassins"], "synergies": ["Lady Sun"], "desc": "Tank suppress kuncian mati tak bisa di-cleanse."},
+        {"name": "Liang", "tier": "S", "wr": "53.2%", "pr": "17.0%", "br": "42.0%", "counters": ["Dash Assassins"], "synergies": ["Augran"], "desc": "Mage/Roam suppress kuncian mati tunggal."},
+        {"name": "Su Lie", "tier": "A", "wr": "51.7%", "pr": "9.5%", "br": "2.0%", "counters": ["Clustered Enemies"], "synergies": ["Xiao Qiao"], "desc": "Tank nyawa dua pemicu knockup tiang raksasa."},
+        {"name": "Xi Shi", "tier": "A", "wr": "52.0%", "pr": "12.0%", "br": "15.0%", "counters": ["Immobile Frontlines"], "synergies": ["Dharma"], "desc": "Mage/Roam pemikat pengendalikan arah jalan musuh."}
     ]
 }
 
-# Helper: Get All Heroes in DB
-ALL_HERO_NAMES = set()
+# Flatten DB list
+ALL_HEROES_LIST = []
 for r, h_list in HERO_DB.items():
     for h in h_list:
-        ALL_HERO_NAMES.add(h["name"])
+        item = h.copy()
+        item["role"] = r
+        ALL_HEROES_LIST.append(item)
 
 # ==========================================
-# HEADER & SIDEBAR CONFIG
+# SESSION STATE INITIALIZATION
 # ==========================================
-st.markdown("<div class='main-title'>⚔️ HOK PRO DRAFT & STRATEGY ENGINE S16</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>Real-Time Analytics • Side Bias • Fearless Series Lock • By Siropkokop</div>", unsafe_allow_html=True)
-
-with st.sidebar:
-    st.header("⚙️ Match Configuration")
-    
-    draft_title = st.text_input("Nama Strategy / Title", "Scrim Game 1 - Heavy Engagement")
-    match_series = st.selectbox("Format Turnamen", ["Best of 3 (Bo3)", "Best of 5 (Bo5)", "Best of 7 (Bo7 - Decider)", "Single Scrim Match"])
-    
-    st.markdown("---")
-    st.subheader("🔵🔴 Side Bias Selector")
-    our_side = st.radio("Sisi Tim Kita:", ["🔵 Blue Side (B1 First Pick)", "🔴 Red Side (R5 Counter Pick)"])
-    
-    st.markdown("---")
-    st.subheader("🔒 Fearless Memory Tracker")
-    st.write(f"**Game Ke:** {st.session_state['game_number']}")
-    if st.session_state['used_heroes']:
-        st.write("**Hero Terkunci (Fearless):**")
-        st.info(", ".join(st.session_state['used_heroes']))
-    else:
-        st.caption("Belum ada hero yang terkunci di series ini.")
-        
-    if st.button("🔄 Reset Memory (Series Baru)"):
-        st.session_state['used_heroes'] = []
-        st.session_state['game_number'] = 1
-        st.success("Memory Fearless berhasil direset!")
-        st.rerun()
+if 'used_heroes' not in st.session_state:
+    st.session_state['used_heroes'] = []
+if 'match_history' not in st.session_state:
+    st.session_state['match_history'] = []
+if 'game_number' not in st.session_state:
+    st.session_state['game_number'] = 1
 
 # ==========================================
-# MAIN DRAFTING INTERFACE
+# HEADER & TITLE BAR
 # ==========================================
-col_draft_our, col_vs, col_draft_enemy = st.columns([5, 1, 5])
+st.markdown("<div class='main-title'>⚔️ HOK PRO REAL-TIME DRAFT ENGINE</div>", unsafe_allow_html=True)
+st.markdown(f"<div class='sub-title'>Database: {len(ALL_HEROES_LIST)} Heroes • 4 Bans Per Side • Instant Real-Time Calculations • By Siropkokop</div>", unsafe_allow_html=True)
 
-# Filter out used heroes from dropdowns
-available_heroes = [h for h in sorted(ALL_HERO_NAMES) if h not in st.session_state['used_heroes']]
+# Top Settings Bar
+col_top1, col_top2, col_top3, col_top4 = st.columns([2, 2, 2, 2])
 
-with col_draft_our:
-    st.subheader("🔵 DRAF TIM KITA (OUR TEAM)")
-    
-    st.markdown("##### 🚫 Ban Phase Kita")
-    b_col1, b_col2 = st.columns(2)
-    with b_col1:
-        our_ban_1 = st.selectbox("Ban 1 Kita", ["None"] + available_heroes, key="ob1")
-    with b_col2:
-        available_ob2 = [h for h in available_heroes if h != our_ban_1]
-        our_ban_2 = st.selectbox("Ban 2 Kita", ["None"] + available_ob2, key="ob2")
-        
-    st.markdown("##### 🛡️ Pick Phase Kita")
-    p_clash = st.selectbox("Clash Lane", ["None"] + [h["name"] for h in HERO_DB["Clash"] if h["name"] in available_heroes and h["name"] not in [our_ban_1, our_ban_2]], key="op_clash")
-    p_jungle = st.selectbox("Jungle", ["None"] + [h["name"] for h in HERO_DB["Jungle"] if h["name"] in available_heroes and h["name"] not in [our_ban_1, our_ban_2, p_clash]], key="op_jungle")
-    p_mid = st.selectbox("Mid Lane", ["None"] + [h["name"] for h in HERO_DB["Mid"] if h["name"] in available_heroes and h["name"] not in [our_ban_1, our_ban_2, p_clash, p_jungle]], key="op_mid")
-    p_farm = st.selectbox("Farm Lane (MM)", ["None"] + [h["name"] for h in HERO_DB["Farm"] if h["name"] in available_heroes and h["name"] not in [our_ban_1, our_ban_2, p_clash, p_jungle, p_mid]], key="op_farm")
-    p_roam = st.selectbox("Roamer", ["None"] + [h["name"] for h in HERO_DB["Roam"] if h["name"] in available_heroes and h["name"] not in [our_ban_1, our_ban_2, p_clash, p_jungle, p_mid, p_farm]], key="op_roam")
-
-our_picks = [p for p in [p_clash, p_jungle, p_mid, p_farm, p_roam] if p != "None"]
-our_bans = [b for b in [our_ban_1, our_ban_2] if b != "None"]
-
-with col_vs:
-    st.markdown("<br><br><br><br><h2 style='text-align: center; color: #FFD700;'>VS</h2>", unsafe_allow_html=True)
-
-with col_draft_enemy:
-    st.subheader("🔴 DRAF TIM MUSUH (ENEMY TEAM)")
-    
-    # Filter out our picks & bans
-    avail_enemy_ban = [h for h in available_heroes if h not in our_picks and h not in our_bans]
-    
-    st.markdown("##### 🚫 Ban Phase Musuh")
-    eb_col1, eb_col2 = st.columns(2)
-    with eb_col1:
-        enemy_ban_1 = st.selectbox("Ban 1 Musuh", ["None"] + avail_enemy_ban, key="eb1")
-    with eb_col2:
-        avail_eb2 = [h for h in avail_enemy_ban if h != enemy_ban_1]
-        enemy_ban_2 = st.selectbox("Ban 2 Musuh", ["None"] + avail_eb2, key="eb2")
-        
-    enemy_bans = [b for b in [enemy_ban_1, enemy_ban_2] if b != "None"]
-    avail_enemy_pick = [h for h in avail_enemy_ban if h not in enemy_bans]
-    
-    st.markdown("##### ⚔️ Pick Phase Musuh")
-    ep_clash = st.selectbox("Clash Musuh", ["None"] + [h["name"] for h in HERO_DB["Clash"] if h["name"] in avail_enemy_pick], key="ep_clash")
-    ep_jungle = st.selectbox("Jungle Musuh", ["None"] + [h["name"] for h in HERO_DB["Jungle"] if h["name"] in avail_enemy_pick and h["name"] != ep_clash], key="ep_jungle")
-    ep_mid = st.selectbox("Mid Musuh", ["None"] + [h["name"] for h in HERO_DB["Mid"] if h["name"] in avail_enemy_pick and h["name"] not in [ep_clash, ep_jungle]], key="ep_mid")
-    ep_farm = st.selectbox("Farm Musuh", ["None"] + [h["name"] for h in HERO_DB["Farm"] if h["name"] in avail_enemy_pick and h["name"] not in [ep_clash, ep_jungle, ep_mid]], key="ep_farm")
-    ep_roam = st.selectbox("Roam Musuh", ["None"] + [h["name"] for h in HERO_DB["Roam"] if h["name"] in avail_enemy_pick and h["name"] not in [ep_clash, ep_jungle, ep_mid, ep_farm]], key="ep_roam")
-
-enemy_picks = [p for p in [ep_clash, ep_jungle, ep_mid, ep_farm, ep_roam] if p != "None"]
-
-# Button to Lock Game to Fearless Memory
-st.markdown("---")
-if st.button("⏭️ Selesaikan Game & Lock Hero ke Fearless Memory"):
-    if our_picks:
-        for hero in our_picks:
-            if hero not in st.session_state['used_heroes']:
-                st.session_state['used_heroes'].append(hero)
+with col_top1:
+    draft_title = st.text_input("🏷️ Nama Strategy / Match", f"Game {st.session_state['game_number']} - Scrim Match")
+with col_top2:
+    match_series = st.selectbox("🏆 Format Seri Match", ["Best of 3 (Bo3)", "Best of 5 (Bo5)", "Best of 7 (Bo7)", "Single Match"])
+with col_top3:
+    our_side = st.radio("🔴🔵 Sisi Tim Kita", ["Blue Side (B1 First Pick)", "Red Side (R5 Counter Pick)"], horizontal=True)
+with col_top4:
+    st.write(f"🎮 **Fearless Game:** Game {st.session_state['game_number']}")
+    if st.button("⏭️ Next Game (Lock Used Heroes)"):
         st.session_state['game_number'] += 1
-        st.success(f"Hero {our_picks} berhasil terkunci! Lanjut ke Game {st.session_state['game_number']}.")
+        st.success("Hero terpakai berhasil di-lock ke Fearless Memory!")
         st.rerun()
-    else:
-        st.warning("Pilih minimal 1 hero sebelum mengunci ke Fearless Memory!")
 
-# ==========================================
-# REAL-TIME COMBO ALERTS & WARNING BANNERS
-# ==========================================
-st.markdown("### ⚠️ Real-Time Combo & Threat Alert System")
-
-# Check Enemy Threats
-threat_alerts = []
-if "Dolia" in enemy_picks:
-    threat_alerts.append("🔴 **AWAS ENEMY PICK DOLIA!** Potensi Combo Celestial Reset (Heino / Marco Polo / Yixing). Amankan Heino atau Biron/Angela CC burst!")
-if "Nezha" in enemy_picks:
-    threat_alerts.append("🔴 **AWAS ENEMY PICK NEZHA!** Lock-on global ke Mid/MM kita. Siapkan Zhang Fei (Shield) atau Biron (Sustain) buat cover!")
-if "Mai Shiranui" in enemy_picks or "Shangguan" in enemy_picks:
-    threat_alerts.append("🔴 **AWAS ENEMY PICK MAGE ASSASSIN!** Dive burst ke backline. Prio Angela (Shield immunity) / Consort Yu / Zhang Fei!")
-if "Augran" in enemy_picks or "Lam" in enemy_picks:
-    threat_alerts.append("🔴 **AWAS ENEMY PICK T0 JUNGLER!** High true damage & execution. Siapkan Musashi / Charlotte debuff!")
-
-# Check Our Synergies
-synergy_alerts = []
-if "Dolia" in our_picks and "Heino" in our_picks:
-    synergy_alerts.append("🟢 **COMBO CELESTIAL RESET ACTIVE!** Double Ultimate time rewind & reset tower HP!")
-if "Mozi" in our_picks and ("Xiao Qiao" in our_picks or "Arli" in our_picks):
-    synergy_alerts.append("🟢 **COMBO UNLI CC ACTIVE!** Long-range Stun Mozi -> Knock-up Xiao Qiao / Gocek Arli!")
-if "Yaria" in our_picks and ("Lady Sun" in our_picks or "Ao'yin (Loong)" in our_picks or "Lam" in our_picks):
-    synergy_alerts.append("🟢 **COMBO SUPPORT REVAMP ACTIVE!** +15% Gold boost & heavy anti-dive shield!")
-if "Sun Ce" in our_picks and ("Da Qiao" in our_picks or "Nuwa" in our_picks):
-    synergy_alerts.append("🟢 **COMBO GLOBAL TELEPORT ACTIVE!** Instant boat gank & matrix teleportasi!")
-
-col_alt1, col_alt2 = st.columns(2)
-with col_alt1:
-    st.markdown("##### 🚨 Danger / Counter Threats")
-    if threat_alerts:
-        for ta in threat_alerts:
-            st.markdown(f"<div class='alert-danger'>{ta}</div>", unsafe_allow_html=True)
-    else:
-        st.caption("Belum ada ancaman combo berbahaya dari musuh.")
-
-with col_alt2:
-    st.markdown("##### 🔥 Active Team Synergies")
-    if synergy_alerts:
-        for sa in synergy_alerts:
-            st.markdown(f"<div class='alert-success'>{sa}</div>", unsafe_allow_html=True)
-    else:
-        st.caption("Pilih hero kombo (Dolia+Heino, Mozi+Xiao Qiao, Yaria+Lady Sun) untuk mengaktifkan bonus sinergi.")
-
-# ==========================================
-# REAL-TIME PROBABILITY ENGINE & GAME PLAN
-# ==========================================
 st.markdown("---")
-st.markdown("### 📊 Real-Time Draft Probability & Strategy Engine")
 
-# Calculate Win Rate Score
-base_wr = 50.0
-total_wr_bonus = 0.0
+# ==========================================
+# REAL-TIME FILTERING & DRAFT INPUT SECTION
+# ==========================================
 
-# Calculate based on our picks
-for role, h_list in HERO_DB.items():
-    for h in h_list:
-        if h["name"] in our_picks:
-            total_wr_bonus += (h["wr"] - 50.0)
+col_draft_left, col_draft_right = st.columns([5, 5])
 
-# Apply Side Bias Bonus
-if "Red Side" in our_side:
-    st.info("🔴 **Red Side Multiplier Active:** Red Side memberikan slot R5 Last Counter Pick. Bonus Win Rate diterapkan untuk Haya (+10%), Ao'yin (+8%), & Zhang Fei (+5%).")
-    if "Haya" in our_picks: total_wr_bonus += 5.0
-    if "Ao'yin (Loong)" in our_picks: total_wr_bonus += 4.0
-    if "Zhang Fei" in our_picks: total_wr_bonus += 3.0
-else:
-    st.info("🔵 **Blue Side Multiplier Active:** Blue Side memberikan keunggulan B1 Power Pick (Augran, Lam, Yaria, Haya).")
+with col_draft_left:
+    st.subheader("🛡️ 1. Fase Banning (4 Bans Per Side)")
+    
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        st.markdown("**🔵 BANS TIM KITA (OUR BANS)**")
+        our_b1 = st.selectbox("Our Ban 1", ["None"] + [h["name"] for h in ALL_HEROES_LIST if h["name"] not in st.session_state['used_heroes']], key="ob1")
+        our_b2 = st.selectbox("Our Ban 2", ["None"] + [h["name"] for h in ALL_HEROES_LIST if h["name"] not in st.session_state['used_heroes'] and h["name"] != our_b1], key="ob2")
+        our_b3 = st.selectbox("Our Ban 3", ["None"] + [h["name"] for h in ALL_HEROES_LIST if h["name"] not in st.session_state['used_heroes'] and h["name"] not in [our_b1, our_b2]], key="ob3")
+        our_b4 = st.selectbox("Our Ban 4", ["None"] + [h["name"] for h in ALL_HEROES_LIST if h["name"] not in st.session_state['used_heroes'] and h["name"] not in [our_b1, our_b2, our_b3]], key="ob4")
+    
+    with col_b2:
+        st.markdown("**🔴 BANS TIM MUSUH (ENEMY BANS)**")
+        enemy_b1 = st.selectbox("Enemy Ban 1", ["None"] + [h["name"] for h in ALL_HEROES_LIST if h["name"] not in st.session_state['used_heroes']], key="eb1")
+        enemy_b2 = st.selectbox("Enemy Ban 2", ["None"] + [h["name"] for h in ALL_HEROES_LIST if h["name"] not in st.session_state['used_heroes'] and h["name"] != enemy_b1], key="eb2")
+        enemy_b3 = st.selectbox("Enemy Ban 3", ["None"] + [h["name"] for h in ALL_HEROES_LIST if h["name"] not in st.session_state['used_heroes'] and h["name"] not in [enemy_b1, enemy_b2]], key="eb3")
+        enemy_b4 = st.selectbox("Enemy Ban 4", ["None"] + [h["name"] for h in ALL_HEROES_LIST if h["name"] not in st.session_state['used_heroes'] and h["name"] not in [enemy_b1, enemy_b2, enemy_b3]], key="eb4")
 
-our_win_rate = round(base_wr + total_wr_bonus, 1)
-our_win_rate = max(35.0, min(85.0, our_win_rate))
+    all_bans = [b for b in [our_b1, our_b2, our_b3, our_b4, enemy_b1, enemy_b2, enemy_b3, enemy_b4] if b != "None"]
 
-col_m1, col_m2 = st.columns([1, 2])
-with col_m1:
-    st.markdown(f"""
-    <div class='metric-box'>
-        <h3 style='margin:0; color:#FFD700;'>Est. Win Probability</h3>
-        <h1 style='margin:0; font-size: 3rem;'>{our_win_rate}%</h1>
-        <p style='margin:0; color:#888;'>Target Score Threshold: > 60.0%</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("---")
+    st.subheader("⚔️ 2. Fase Picking (Real-Time Picks per Role)")
+    
+    col_p1, col_p2 = st.columns(2)
+    
+    def get_pick_opts(role_name):
+        return ["None"] + [h["name"] for h in HERO_DB[role_name] if h["name"] not in st.session_state['used_heroes'] and h["name"] not in all_bans]
 
-with col_m2:
+    with col_p1:
+        st.markdown("**💙 PICKS TIM KITA**")
+        our_clash = st.selectbox("Clash Lane", get_pick_opts("Clash"), key="op_clash")
+        our_jungle = st.selectbox("Jungle", get_pick_opts("Jungle"), key="op_jungle")
+        our_mid = st.selectbox("Mid Lane", get_pick_opts("Mid"), key="op_mid")
+        our_farm = st.selectbox("Farm Lane (MM)", get_pick_opts("Farm"), key="op_farm")
+        our_roam = st.selectbox("Roam / Support", get_pick_opts("Roam"), key="op_roam")
+
+    with col_p2:
+        st.markdown("**❤️ PICKS TIM MUSUH**")
+        enemy_clash = st.selectbox("Enemy Clash", get_pick_opts("Clash"), key="ep_clash")
+        enemy_jungle = st.selectbox("Enemy Jungle", get_pick_opts("Jungle"), key="ep_jungle")
+        enemy_mid = st.selectbox("Enemy Mid", get_pick_opts("Mid"), key="ep_mid")
+        enemy_farm = st.selectbox("Enemy Farm", get_pick_opts("Farm"), key="ep_farm")
+        enemy_roam = st.selectbox("Enemy Roam", get_pick_opts("Roam"), key="ep_roam")
+
+    our_picks = [p for p in [our_clash, our_jungle, our_mid, our_farm, our_roam] if p != "None"]
+    enemy_picks = [p for p in [enemy_clash, enemy_jungle, enemy_mid, enemy_farm, enemy_roam] if p != "None"]
+
+    if st.button("🔒 Lock Current Picks to Fearless Memory"):
+        for p in our_picks:
+            if p not in st.session_state['used_heroes']:
+                st.session_state['used_heroes'].append(p)
+        st.success("Hero berhasil disimpan ke memori Fearless!")
+        st.rerun()
+
+# ==========================================
+# REAL-TIME INSTANT CALCULATOR & TACTICAL DASHBOARD
+# ==========================================
+with col_draft_right:
+    st.subheader("📊 3. Real-Time Instant Calculation & Scheme")
+
+    # INSTANT CALCULATIONS (NO WAITING FOR ALL 5 PICKS)
+    base_score = 50.0
+    
+    # Tier bonuses for our picks
+    for p in our_picks:
+        h_info = next((item for item in ALL_HEROES_LIST if item["name"] == p), None)
+        if h_info:
+            if h_info["tier"] == "S":
+                base_score += 4.5
+            elif h_info["tier"] == "A":
+                base_score += 2.5
+            
+            # Red side bias bonus
+            if "Red Side" in our_side and p in ["Haya", "Ao'yin (Loong)", "Zhang Fei", "Florentino", "Augran"]:
+                base_score += 3.5
+
+    # Deduct enemy picks power
+    for ep in enemy_picks:
+        eh_info = next((item for item in ALL_HEROES_LIST if item["name"] == ep), None)
+        if eh_info:
+            if eh_info["tier"] == "S":
+                base_score -= 4.0
+            elif eh_info["tier"] == "A":
+                base_score -= 2.0
+
+    # Synergy & Counter calculation
+    if "Dolia" in our_picks and "Heino" in our_picks:
+        base_score += 5.0
+    if "Mozi" in our_picks and ("Xiao Qiao" in our_picks or "Arli" in our_picks):
+        base_score += 4.0
+    if "Yaria" in our_picks and ("Lady Sun" in our_picks or "Ao'yin (Loong)" in our_picks or "Lam" in our_picks):
+        base_score += 4.0
+    if "Zhang Fei" in our_picks and ("Lady Sun" in our_picks or "Angela" in our_picks):
+        base_score += 3.0
+
+    our_win_rate = min(max(round(base_score, 1), 20.0), 85.0)
+    enemy_win_rate = round(100.0 - our_win_rate, 1)
+
+    # 1. Real-Time Gauge Display
+    st.markdown(f"#### 📈 Estimated Win Probability: **{our_win_rate}%** (Kita) vs **{enemy_win_rate}%** (Musuh)")
     st.progress(int(our_win_rate))
-    if our_win_rate >= 65.0:
-        st.success("🔥 **SUPERIOR DRAFT ADVANTAGE!** Komposisi draf memiliki sinergi tinggi dan meng-counter mayoritas hero lawan.")
-    elif our_win_rate >= 55.0:
-        st.info("✅ **BALANCED SOLID DRAFT.** Draf stabil dengan power spike seimbang di Mid & Late Game.")
-    else:
-        st.warning("⚠️ **RISKY DRAFT COMPOSITION.** Perhatikan counter-threat musuh atau amankan hero comfort di slot tersisa.")
 
-# ==========================================
-# DYNAMIC IN-GAME STRATEGY SCHEMA
-# ==========================================
-st.markdown("### 💡 Skema Permainan In-Game (Dynamic Game Plan)")
-
-schema_col1, schema_col2 = st.columns(2)
-
-with schema_col1:
-    st.markdown("#### ⏱️ 1. Early Game Execution (Menit 0:00 - 4:00)")
-    if "Pei" in our_picks or "Biron" in our_picks:
-        st.write("• **Aggressive Boar Invade (Menit 0:30):** Biron / Pei punya power spike sejak menit awal. Lakukan invasi ke babi/buff kecil musuh!")
-    else:
-        st.write("• **Standard Wave Clear & Prio Mid:** Roamer bantu Mid sapu wave pertama minion. Amankan visi sungai & curi babi kecil musuh.")
+    # 2. Instant Threat & Synergy Alerts
+    st.markdown("#### 🚨 Real-Time Alerts & Synergy Highlights")
     
-    st.write("• **Space Sprite Contest (Menit 1:00):** Clash Lane wajib amankan bunga teleportasi buat gank kilat ke Farm Lane.")
-    st.write("• **Level 4 Power Spike (Menit 1:20 - 2:00):** Jungle selesai clear hutan pertama. Lakukan gank pertama ke lane musuh yang overextend.")
+    danger_detected = False
+    if "Nezha" in enemy_picks:
+        st.markdown("<div class='alert-danger'>⚠️ <b>ENEMY THREAT ALERT:</b> Musuh pick <b>Nezha</b> (Lock-On Global)! Utamakan Cover/Peel untuk Mid/MM kita dengan Zhang Fei/Biron.</div>", unsafe_allow_html=True)
+        danger_detected = True
+    if "Dolia" in enemy_picks:
+        st.markdown("<div class='alert-danger'>⚠️ <b>ENEMY THREAT ALERT:</b> Musuh pick <b>Dolia</b>! Waspada reset cooldown ultimate dua kali (Awas Heino/Marco Polo combo).</div>", unsafe_allow_html=True)
+        danger_detected = True
+    if "Mai Shiranui" in enemy_picks or "Shangguan" in enemy_picks:
+        st.markdown("<div class='alert-danger'>⚠️ <b>ENEMY THREAT ALERT:</b> Musuh pick <b>Mage-Assassin Lincah</b>! Pasang vision semak sungai rapat-rapat.</div>", unsafe_allow_html=True)
+        danger_detected = True
+    if "Donghuang" in enemy_picks or "Liang" in enemy_picks:
+        st.markdown("<div class='alert-danger'>⚠️ <b>ENEMY THREAT ALERT:</b> Musuh punya <b>Suppress CC Kuncian Mati</b>! Jangan dive solo tanpa backup.</div>", unsafe_allow_html=True)
+        danger_detected = True
 
-    st.markdown("#### ⚔️ 2. Mid Game Strategy (Menit 4:00 - 10:00)")
-    st.write("• **Turret Plate Collapse (Menit 4:00):** Pelat turret rontok. Alihkan prioritas ke **Tyrant pertama** buat dapet buff damage serangan!")
-    st.write("• **Gold Sharing Rules:** Terapkan 2-player wave sharing (160% total gold) di Mid Lane buat ngeboost ekonomi MM & Jungle.")
-    st.write("• **Primal Bond Awareness:** Jangan bunuh Overlord & Tyrant bersamaan! Kena debuff -50% damage ke naga kedua selama 90 detik.")
+    if not danger_detected:
+        st.markdown("<div class='alert-success'>✅ Belum terdeteksi ancaman combo spesifik musuh. Draf berjalan stabil.</div>", unsafe_allow_html=True)
 
-with schema_col2:
-    st.markdown("#### 🏆 3. Late Game & Teamfight Execution (Menit 10:00 - 20:00+)")
+    # Active Synergies
+    if "Dolia" in our_picks and "Heino" in our_picks:
+        st.markdown("<div class='alert-success'>🔥 <b>ACTIVE COMBO:</b> <i>Celestial Reset (Dolia + Heino)</i> Aktif! Reset HP & Tower area terjamin.</div>", unsafe_allow_html=True)
+    if "Mozi" in our_picks and "Xiao Qiao" in our_picks:
+        st.markdown("<div class='alert-success'>🔥 <b>ACTIVE COMBO:</b> <i>Unli CC Poke (Mozi + Xiao Qiao)</i> Aktif! Stun jarak jauh + Knock-up instan.</div>", unsafe_allow_html=True)
+    if "Yaria" in our_picks and ("Lady Sun" in our_picks or "Ao'yin (Loong)" in our_picks):
+        st.markdown("<div class='alert-success'>🔥 <b>ACTIVE COMBO:</b> <i>Support Revamp +15% Gold (Yaria + Carry)</i> Aktif! Hyper-carry gold boost.</div>", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # 3. DYNAMIC REAL-TIME IN-GAME SCHEME
+    st.markdown("#### ⚡ Dynamic In-Game Strategy Scheme")
     
-    if "Lady Sun" in our_picks or "Ao'yin (Loong)" in our_picks:
-        st.write("• **Core Protection (Peel Carry):** Lady Sun / Loong adalah finisher utama. Roamer & Clash wajib pasang badan di depan.")
-    elif "Arli" in our_picks:
-        st.write("• **Kiting & Flank Strategy:** Arli gocek dari semak samping, tumpukan CC Roamer pemicu ruang bebas.")
-    
-    if "Angela" in our_picks or "Wang Zhaojun" in our_picks or "Xiao Qiao" in our_picks:
-        st.write("• **Chokepoint Stun Lock:** Pancing war di area sempit dekat sungai/naga biar AoE skill Mid hit 3-5 orang instan.")
-        
-    st.write("• **Tempest Dragon Penentu (Menit 20:00+):** Peringatan keras! **Dilarang bunuh naga biasa di menit 18:30-19:00** biar tidak kena debuff Primal Bond (-60% damage) pas Tempest Dragon muncul di menit 20:00!")
+    st.write("• **Early Game (0:00 - 4:00):** Roamer bantu Mid sapu wave minion 1. Amankan *Space Sprite* (Bunga Teleportasi Clash Lane) menit 1:00. Hati-hati gank Jungler musuh Level 4 menit 1:20-2:00.")
+    st.write("• **Mid Game (4:00 - 10:00):** Pelat turret runtuh menit 4:00. Prioritaskan **Tyrant Pertama** untuk buff damage. Terapkan 2-player wave sharing (160% gold). Awas debuff *Primal Bond* (-50% damage ke naga kedua).")
+    st.write("• **Late Game (10:00 - 20:00+):** Pertahankan formasi dekat choke points. **Dilarang bunuh naga biasa di menit 18:30-19:00** agar bebas debuff *Primal Bond* (-60% damage) saat **Tempest Dragon** muncul di menit 20:00!")
 
 st.markdown("---")
 
 # ==========================================
-# EXPORT & MATCH HISTORY LOG TABS
+# TABS: EXPORT, MATCH LOG, & COMPLETE 116 HERO DB
 # ==========================================
-tab_export, tab_history, tab_database = st.tabs(["📲 Export to WhatsApp", "📊 Recent Match Analysis", "📚 Complete Hero Database S16"])
+tab_export, tab_history, tab_database = st.tabs(["📲 Export to WhatsApp", "📊 Recent Match Analysis", "📚 Complete 116 Hero Database S16"])
 
 with tab_export:
     st.subheader("📋 WhatsApp Copy-Paste Summary")
     
-    wa_text = f"""*BLUEPRINT DRAFT HOK* 🎮🔥
+    wa_text = f"""*BLUEPRINT DRAFT HOK PRO* 🎮🔥
 *Title:* {draft_title}
-*Series:* {match_series} (Game {st.session_state['game_number']}) | *Side:* {our_side}
-*Win Probability Engine:* {our_win_rate}% (Our Team)
+*Series:* {match_series} | *Side:* {our_side}
+*Win Probability:* {our_win_rate}% (Our Team) vs {enemy_win_rate}% (Enemy)
 
 🚫 *BANS:*
-• *Our Bans:* {', '.join([h for h in [our_ban_1, our_ban_2] if h != 'None']) or 'None'}
-• *Enemy Bans:* {', '.join([h for h in [enemy_ban_1, enemy_ban_2] if h != 'None']) or 'None'}
+• *Our Bans:* {', '.join([b for b in [our_b1, our_b2, our_b3, our_b4] if b != 'None']) or 'None'}
+• *Enemy Bans:* {', '.join([b for b in [enemy_b1, enemy_b2, enemy_b3, enemy_b4] if b != 'None']) or 'None'}
 
 🛡️ *OUR PICKS:*
-• *Clash:* {p_clash}
-• *Jungle:* {p_jungle}
-• *Mid:* {p_mid}
-• *Farm:* {p_farm}
-• *Roam:* {p_roam}
+• *Clash:* {our_clash} | *Jungle:* {our_jungle}
+• *Mid:* {our_mid} | *Farm:* {our_farm} | *Roam:* {our_roam}
 
 🔴 *ENEMY PICKS:*
-• *Clash:* {ep_clash} | *Jungle:* {ep_jungle} | *Mid:* {ep_mid} | *Farm:* {ep_farm} | *Roam:* {ep_roam}
+• *Clash:* {enemy_clash} | *Jungle:* {enemy_jungle}
+• *Mid:* {enemy_mid} | *Farm:* {enemy_farm} | *Roam:* {enemy_roam}
 
-⚡ *KEY GAME PLAN:*
+⚡ *KEY TACTICAL SCHEME:*
 • Early Prio Mid & Space Sprite (Min 1:00)
-• Tyrant First Priority (Min 4:00)
-• Beware Primal Bond Debuff on Double Dragon!
+• First Tyrant Priority at Turret Collapse (Min 4:00)
+• Beware Primal Bond Debuff & Tempest Dragon Setup (Min 20:00)
 
-*Gaspol, Bantai Semuanya! Let's Go!* 🚀🔥"""
+*Bantai Semuanya! Let's Go!* 🚀🔥"""
 
     st.code(wa_text, language="markdown")
-    st.info("💡 Tinggal klik ikon 'Copy' di pojok kanan atas kotak di atas, lalu paste ke WhatsApp tim!")
+    st.info("💡 Klik ikon 'Copy' di pojok kanan atas kotak teks di atas, lalu paste langsung ke WhatsApp tim!")
 
 with tab_history:
-    st.subheader("📊 Recent Match Logger & Coach Notes")
+    st.subheader("📊 Recent Match Logger & Analyst Notes")
     
-    with st.form("match_log_form"):
+    with st.form("match_log_form_v5"):
         col_m1, col_m2, col_m3 = st.columns(3)
         with col_m1:
-            m_opp = st.text_input("Lawan / Opponent Team", "EVOS / RRQ / Scrim Match")
+            m_opp = st.text_input("Opponent Team", "EVOS / RRQ / Scrim Match")
             m_res = st.selectbox("Hasil Match", ["WIN 🏆", "LOSS ❌"])
         with col_m2:
-            m_kda = st.text_input("Score KDA Tim", "18 - 10")
+            m_kda = st.text_input("Score KDA", "18 - 10")
             m_dur = st.text_input("Durasi Match", "14:25")
         with col_m3:
             m_mvp = st.text_input("MVP Player & Hero", "Dapid (Augran) / Reyhan (Lady Sun)")
             
-        m_notes = st.text_area("Catatan Evaluasi Coach / Takeaways", "Disiplin cover Mid jalan rapi. Targeting late game pas diinisiasi Dharma langsung dapet 3 kill.")
+        m_notes = st.text_area("Catatan Evaluasi Coach / Analyst", "Disiplin cover Mid jalan rapi. Inisiasi Late Game pas.")
         
         submit_log = st.form_submit_button("💾 Save Match to History")
         if submit_log:
@@ -441,29 +436,33 @@ with tab_history:
             st.success("Hasil match berhasil disimpan ke History Log!")
             st.rerun()
 
-    # Display History
     if st.session_state['match_history']:
         st.markdown("#### 📜 History Match Logged")
         df_hist = pd.DataFrame(st.session_state['match_history'])
         st.dataframe(df_hist, use_container_width=True)
 
 with tab_database:
-    st.subheader("📚 Hero Database & Stats (Season 16)")
+    st.subheader(f"📚 Complete Hero Database S16 ({len(ALL_HEROES_LIST)} Heroes)")
     
     role_filter = st.radio("Filter Role:", ["All", "Clash", "Jungle", "Mid", "Farm", "Roam"], horizontal=True)
+    search_query = st.text_input("🔍 Cari Hero berdasarkan Nama atau Deskripsi:", "")
     
     filtered_db = []
-    for r, h_list in HERO_DB.items():
-        if role_filter == "All" or role_filter == r:
-            for h in h_list:
-                item = h.copy()
-                item["Role"] = r
-                filtered_db.append(item)
+    for item in ALL_HEROES_LIST:
+        if role_filter == "All" or role_filter == item["role"]:
+            if search_query.lower() in item["name"].lower() or search_query.lower() in item["desc"].lower():
+                filtered_db.append({
+                    "Hero Name": item["name"],
+                    "Role": item["role"],
+                    "Tier": item["tier"],
+                    "Win Rate": item["wr"],
+                    "Pick Rate": item["pr"],
+                    "Ban Rate": item["br"],
+                    "Description": item["desc"]
+                })
                 
-    df_db = pd.DataFrame(filtered_db)[["name", "Role", "tier", "wr", "pr", "br", "desc"]]
-    df_db.columns = ["Hero Name", "Role", "Tier", "Win Rate", "Pick Rate", "Ban Rate", "Specialization / Description"]
+    df_db = pd.DataFrame(filtered_db)
     st.dataframe(df_db, use_container_width=True)
 
-# Footer Credit
 st.markdown("---")
-st.markdown("<div style='text-align: center; color: #888;'>HOK Pro Draft & Strategy Engine S16 • Built for Esports Analytics • Credit: <b>By Siropkokop</b></div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: #888;'>HOK Pro Draft Engine v5 • Built for Esports Analysts • Credit: <b>By Siropkokop</b></div>", unsafe_allow_html=True)
