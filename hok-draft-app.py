@@ -203,16 +203,20 @@ for r, h_list in HERO_DB.items():
         item["role"] = r
         ALL_HEROES_LIST.append(item)
 
-# ==========================================\n# SESSION STATE INITIALIZATION
-# ==========================================\nif 'used_heroes' not in st.session_state:
+# ==========================================
+# SESSION STATE INITIALIZATION
+# ==========================================
+if 'used_heroes' not in st.session_state:
     st.session_state['used_heroes'] = []
 if 'match_history' not in st.session_state:
     st.session_state['match_history'] = []
 if 'game_number' not in st.session_state:
     st.session_state['game_number'] = 1
 
-# ==========================================\n# HEADER & TITLE BAR
-# ==========================================\nst.markdown("<div class='main-title'>⚔️ HOK PRO REAL-TIME DRAFT ENGINE V7</div>", unsafe_allow_html=True)
+# ==========================================
+# HEADER & TITLE BAR
+# ==========================================
+st.markdown("<div class='main-title'>⚔️ HOK PRO REAL-TIME DRAFT ENGINE V7</div>", unsafe_allow_html=True)
 st.markdown(f"<div class='sub-title'>116 Heroes DB • 4 Bans Per Side • Dynamic Real-Time Strategy • Flex Counter Radar • Real-Time Item Advisor • By Siropkokop</div>", unsafe_allow_html=True)
 
 # Top Settings Bar
@@ -233,8 +237,10 @@ with col_top4:
 
 st.markdown("---")
 
-# ==========================================\n# REAL-TIME DRAFT INPUT SECTION
-# ==========================================\ncol_draft_left, col_draft_right = st.columns([5, 5])
+# ==========================================
+# REAL-TIME DRAFT INPUT SECTION
+# ==========================================
+col_draft_left, col_draft_right = st.columns([5, 5])
 
 with col_draft_left:
     st.subheader("🛡️ 1. Fase Banning (4 Bans Per Side)")
@@ -294,8 +300,10 @@ with col_draft_left:
         st.success("Hero berhasil disimpan ke memori Fearless!")
         st.rerun()
 
-# ==========================================\n# REAL-TIME INSTANT CALCULATOR & TACTICAL DASHBOARD
-# ==========================================\nwith col_draft_right:
+# ==========================================
+# REAL-TIME INSTANT CALCULATOR & TACTICAL DASHBOARD
+# ==========================================
+with col_draft_right:
     st.subheader("📊 3. Real-Time Calculation & Flex Radar")
 
     # INSTANT CALCULATIONS
@@ -431,8 +439,10 @@ with col_draft_left:
 
 st.markdown("---")
 
-# ==========================================\n# REAL-TIME DYNAMIC IN-GAME STRATEGY SCHEME
-# ==========================================\nst.subheader("🧭 4. Dynamic Real-Time In-Game Macro Strategy")
+# ==========================================
+# REAL-TIME DYNAMIC IN-GAME STRATEGY SCHEME
+# ==========================================
+st.subheader("🧭 4. Dynamic Real-Time In-Game Macro Strategy")
 
 schema_col1, schema_col2 = st.columns(2)
 
@@ -470,8 +480,10 @@ with schema_col2:
 
 st.markdown("---")
 
-# ==========================================\n# EXPORT, HISTORY LOG & DATABASE TABS
-# ==========================================\ntab_export, tab_history, tab_database = st.tabs(["📲 Export to WhatsApp", "📊 Recent Match Analysis", "📚 Complete 116 Hero Database S16"])
+# ==========================================
+# EXPORT, HISTORY LOG & DATABASE TABS
+# ==========================================
+tab_export, tab_history, tab_database = st.tabs(["📲 Export to WhatsApp", "📊 Recent Match Analysis", "📚 Complete 116 Hero Database S16"])
 
 with tab_export:
     st.subheader("📋 WhatsApp Copy-Paste Summary")
